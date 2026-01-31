@@ -31,6 +31,7 @@ const COLUMNS = {
 };
 
 module.exports = async (req, res) => {
+    // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -56,6 +57,7 @@ module.exports = async (req, res) => {
             });
         }
 
+        // Verificar variables de entorno
         if (!SPREADSHEET_ID || !GOOGLE_API_KEY) {
             return res.status(500).json({ 
                 success: false, 
@@ -64,11 +66,13 @@ module.exports = async (req, res) => {
             });
         }
 
+        // Inicializar Google Sheets API
         const sheets = google.sheets({ 
             version: 'v4', 
             auth: GOOGLE_API_KEY 
         });
 
+        // Leer todos los datos de la hoja
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
             range: `${SHEET_NAME}!A:U`,
@@ -83,13 +87,14 @@ module.exports = async (req, res) => {
             });
         }
 
+        // Buscar el ticket por QR code (saltar header)
         let ticketRow = null;
         let rowIndex = -1;
 
         for (let i = 1; i < rows.length; i++) {
             if (rows[i][COLUMNS.QR_CODE_COMPRA] === qrCode) {
                 ticketRow = rows[i];
-                rowIndex = i + 1;
+                rowIndex = i + 1; // +1 porque Google Sheets empieza en 1
                 break;
             }
         }
@@ -101,9 +106,11 @@ module.exports = async (req, res) => {
             });
         }
 
+        // Verificar si el ticket ya fue usado
         const ticketUsado = ticketRow[COLUMNS.TICKET_USADO];
         const alreadyUsed = ticketUsado === 'SI' || ticketUsado === 'si' || ticketUsado === true;
 
+        // Preparar datos del ticket
         const ticketData = {
             order_id: ticketRow[COLUMNS.ORDER_ID],
             nombre: ticketRow[COLUMNS.NOMBRE],
@@ -118,6 +125,7 @@ module.exports = async (req, res) => {
             fecha_uso: ticketRow[COLUMNS.FECHA_USO] || null
         };
 
+        // Verificar que el pago esté completado
         if (ticketData.status_pago !== 'pagado') {
             return res.status(400).json({ 
                 success: false, 
@@ -126,6 +134,7 @@ module.exports = async (req, res) => {
             });
         }
 
+        // Si ya está usado, devolver info pero no actualizarlo
         if (alreadyUsed) {
             return res.status(200).json({ 
                 success: true,
@@ -135,6 +144,7 @@ module.exports = async (req, res) => {
             });
         }
 
+        // Marcar ticket como usado
         const now = new Date();
         const fechaUso = now.toLocaleString('es-MX', { 
             timeZone: 'America/Mexico_City',
@@ -148,7 +158,7 @@ module.exports = async (req, res) => {
 
         const updateResponse = await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!T${rowIndex}:U${rowIndex}`,
+            range: `${SHEET_NAME}!T${rowIndex}:U${rowIndex}`, // Columnas T y U
             valueInputOption: 'RAW',
             resource: {
                 values: [['SI', fechaUso]]
