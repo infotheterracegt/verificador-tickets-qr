@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador QR - The Terrace</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .scanner-box {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        #reader {
+            border-radius: 10px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-box {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .result-box.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-box.success {
+            border-left: 5px solid #10b981;
+        }
+
+        .result-box.error {
+            border-left: 5px solid #ef4444;
+        }
+
+        .result-box.warning {
+            border-left: 5px solid #f59e0b;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .result-icon {
+            font-size: 40px;
+            margin-right: 15px;
+        }
+
+        .result-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .result-details {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .detail-value {
+            font-weight: 500;
+            color: #111827;
+            text-align: right;
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .stat-item {
+            text-align: center;
+            color: white;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        #manual-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        #manual-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎫 Verificador de Tickets</h1>
+            <p>The Terrace Press: Aaron Sevilla</p>
+        </div>
+
+        <div class="scanner-box">
+            <div id="reader"></div>
+            <input type="text" id="manual-input" placeholder="O ingresa el código QR manualmente">
+            <button id="start-scan" class="btn btn-primary">📷 Iniciar Escáner</button>
+            <button id="verify-manual" class="btn btn-primary">✓ Verificar Código Manual</button>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: white;">Verificando ticket...</p>
+        </div>
+
+        <div id="result" class="result-box">
+            <div class="result-header">
+                <div class="result-icon" id="result-icon">✓</div>
+                <div>
+                    <div class="result-title" id="result-title">Ticket Válido</div>
+                </div>
+            </div>
+            <div class="result-details" id="result-details"></div>
+            <button id="scan-again" class="btn btn-primary">Escanear Otro Ticket</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-number" id="stat-verified">0</span>
+                <span class="stat-label">Verificados</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="stat-rejected">0</span>
+                <span class="stat-label">Rechazados</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        let html5QrCode;
+        let scanning = false;
+        let stats = {
+            verified: parseInt(localStorage.getItem('verified') || '0'),
+            rejected: parseInt(localStorage.getItem('rejected') || '0')
+        };
+
+        // Actualizar stats en UI
+        function updateStats() {
+            document.getElementById('stat-verified').textContent = stats.verified;
+            document.getElementById('stat-rejected').textContent = stats.rejected;
+            localStorage.setItem('verified', stats.verified);
+            localStorage.setItem('rejected', stats.rejected);
+        }
+
+        updateStats();
+
+        // Inicializar escáner
+        const startBtn = document.getElementById('start-scan');
+        const verifyManualBtn = document.getElementById('verify-manual');
+        const manualInput = document.getElementById('manual-input');
+        const scanAgainBtn = document.getElementById('scan-again');
+        const resultBox = document.getElementById('result');
+        const loadingBox = document.getElementById('loading');
+
+        startBtn.addEventListener('click', async () => {
+            if (scanning) {
+                await stopScanning();
+            } else {
+                await startScanning();
+            }
+        });
+
+        verifyManualBtn.addEventListener('click', () => {
+            const code = manualInput.value.trim();
+            if (code) {
+                verifyTicket(code);
+                manualInput.value = '';
+            }
+        });
+
+        scanAgainBtn.addEventListener('click', async () => {
+            resultBox.classList.remove('show');
+            if (!scanning) {
+                await startScanning();
+            }
+        });
+
+        async function startScanning() {
+            try {
+                html5QrCode = new Html5Qrcode("reader");
+                
+                const config = { 
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                };
+
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    onScanSuccess,
+                    onScanError
+                );
+
+                scanning = true;
+                startBtn.textContent = '⏸ Detener Escáner';
+                startBtn.style.background = '#ef4444';
+            } catch (err) {
+                console.error('Error starting scanner:', err);
+                alert('Error al iniciar la cámara. Verifica los permisos.');
+            }
+        }
+
+        async function stopScanning() {
+            if (html5QrCode) {
+                await html5QrCode.stop();
+                scanning = false;
+                startBtn.textContent = '📷 Iniciar Escáner';
+                startBtn.style.background = '#667eea';
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            stopScanning();
+            verifyTicket(decodedText);
+        }
+
+        function onScanError(errorMessage) {
+            // Ignorar errores de escaneo continuo
+        }
+
+        async function verifyTicket(qrCode) {
+            resultBox.classList.remove('show');
+            loadingBox.classList.add('show');
+
+            try {
+                const response = await fetch('/api/verify-ticket', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ qrCode })
+                });
+
+                const data = await response.json();
+                
+                loadingBox.classList.remove('show');
+                showResult(data);
+            } catch (error) {
+                loadingBox.classList.remove('show');
+                showResult({
+                    success: false,
+                    message: 'Error de conexión',
+                    error: error.message
+                });
+            }
+        }
+
+        function showResult(data) {
+            const resultIcon = document.getElementById('result-icon');
+            const resultTitle = document.getElementById('result-title');
+            const resultDetails = document.getElementById('result-details');
+
+            resultBox.className = 'result-box show';
+
+            if (data.success) {
+                if (data.alreadyUsed) {
+                    // Ticket ya usado
+                    resultBox.classList.add('warning');
+                    resultIcon.textContent = '⚠️';
+                    resultTitle.textContent = 'Ticket Ya Usado';
+                    stats.rejected++;
+                } else {
+                    // Ticket válido
+                    resultBox.classList.add('success');
+                    resultIcon.textContent = '✓';
+                    resultTitle.textContent = 'Ticket Válido';
+                    stats.verified++;
+                }
+
+                const ticket = data.ticket;
+                resultDetails.innerHTML = `
+                    <div class="detail-row">
+                        <span class="detail-label">Nombre:</span>
+                        <span class="detail-value">${ticket.nombre}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Email:</span>
+                        <span class="detail-value">${ticket.email || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Evento:</span>
+                        <span class="detail-value">${ticket.evento}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Fase:</span>
+                        <span class="detail-value">${ticket.fase}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Tickets:</span>
+                        <span class="detail-value">${ticket.cantidad_tickets || 1}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Total Pagado:</span>
+                        <span class="detail-value">$${ticket.total_pagado}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Fecha Compra:</span>
+                        <span class="detail-value">${ticket.fecha_compra}</span>
+                    </div>
+                    ${data.alreadyUsed ? `
+                    <div class="detail-row">
+                        <span class="detail-label">Usado el:</span>
+                        <span class="detail-value" style="color: #ef4444;">${ticket.fecha_uso}</span>
+                    </div>
+                    ` : ''}
+                `;
+            } else {
+                resultBox.classList.add('error');
+                resultIcon.textContent = '✗';
+                resultTitle.textContent = 'Ticket No Válido';
+                resultDetails.innerHTML = `
+                    <p style="color: #ef4444; font-weight: 500;">${data.message}</p>
+                    ${data.error ? `<p style="color: #6b7280; font-size: 12px; margin-top: 10px;">${data.error}</p>` : ''}
+                `;
+                stats.rejected++;
+            }
+
+            updateStats();
+        }
+    </script>
+</body>
+</html>
