@@ -335,18 +335,11 @@
         <div class="header">
             <img src="https://cdn.shopify.com/s/files/1/0655/3544/3015/files/the_terrace_logo.png?v=1768212138" alt="The Terrace Logo" class="logo">
             <h1>Verificador de Tickets</h1>
-            <p>The Terrace Press · Acceso personal</p>
-            <div class="event-info">
-                ENTRADA THE TERRACE PRESS: AARON SEVILLA<br>
-                FASE 1
-            </div>
         </div>
 
         <div class="scanner-box">
             <div id="reader"></div>
-            <input type="text" id="manual-input" placeholder="O ingresa el código QR manualmente">
             <button id="start-scan" class="btn btn-primary">Iniciar Escáner</button>
-            <button id="verify-manual" class="btn btn-primary">Verificar Código Manual</button>
         </div>
 
         <div id="loading" class="loading">
@@ -377,9 +370,6 @@
             </div>
         </div>
 
-        <div class="footer-note">
-            Presenta este código QR en la entrada
-        </div>
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -403,8 +393,6 @@
 
         // Inicializar escáner
         const startBtn = document.getElementById('start-scan');
-        const verifyManualBtn = document.getElementById('verify-manual');
-        const manualInput = document.getElementById('manual-input');
         const scanAgainBtn = document.getElementById('scan-again');
         const resultBox = document.getElementById('result');
         const loadingBox = document.getElementById('loading');
@@ -414,14 +402,6 @@
                 await stopScanning();
             } else {
                 await startScanning();
-            }
-        });
-
-        verifyManualBtn.addEventListener('click', () => {
-            const code = manualInput.value.trim();
-            if (code) {
-                verifyTicket(code);
-                manualInput.value = '';
             }
         });
 
